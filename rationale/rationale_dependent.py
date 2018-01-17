@@ -97,7 +97,7 @@ class Encoder(nn.Module):
         return scores
 
 class Model(nn.Module):
-    def __init__(self, args=args, embedding_loader=None):
+    def __init__(self, args, embedding_loader=None):
         super(Model, self).__init__()
         self.embedding_loader=embedding_loader
         self.embedding = nn.Embedding(args.vocab_size,args.embedding_dim)
@@ -157,7 +157,7 @@ def train(args, model,train_data, valid_data, test_data = None):
                 pred_loss = nn.CrossEntropyLoss(scores,by)
             z_size_loss = torch.abs(z_sizes.sum()-args.expected_z_size)
             z_coh_loss = (z[1:,:] - z[:-1,:]).abs().sum().float()
-            reward = -(pred_loss + args.sparsity * z_size_loss + args.coherence * z_coh_loss)
+            reward = -(pred_loss + args.sparsity * z_size_loss + args.sparsity * args.coherence * z_coh_loss)
             loss = -z_bernoulli.log_prob(z) * reward
             loss.backward()
             optimizer.step()
@@ -240,7 +240,7 @@ def main(args):
         train_x = [ embedding_loader.map_words_to_indexes(x)[:args.max_len] for x in train_x ]
 
     if args.valid:
-        valid_x, valid_y = myio.read_annotations(args.dev)
+        valid_x, valid_y = myio.read_annotations(args.valid)
         valid_x = [ embedding_loader.map_words_to_indexes(x)[:args.max_len] for x in valid_x ]
 
     if args.test_json:
