@@ -27,11 +27,14 @@ class ZlayerCell(nn.Module):
 
 
 class Zlayer(nn.Module):
-    def __init__(self, input_x_dim, batch_size):
+    def __init__(self, args, input_x_dim, batch_size):
         super(Zlayer, self).__init__()
         self.batch_size = batch_size
         self.cell = ZlayerCell(input_x_dim)
-        self.initial_state = self.init_hidden()
+        if args.use_gpu and torch.cuda.is_available():
+            self.initial_state = Variable(torch.zeros(self.batch_size,1).cuda)
+        else:
+            self.initial_state = Variable(torch.zeros(self.batch_size, 1))
 
     def forward(self, input_x):
         # input_x shape (sequence_length,batch_size,hidden_dim)
@@ -49,8 +52,8 @@ class Zlayer(nn.Module):
         outputs.squeeze_()
         return outputs
 
-    def init_hidden(self):
-        return Variable(torch.zeros(self.batch_size,1))#requires_grad=False
+    # def init_hidden(self):
+    #     return Variable(torch.zeros(self.batch_size,1))#requires_grad=False
 
 if __name__=='__main__':
     model=Zlayer(30, 64)
