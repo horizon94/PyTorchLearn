@@ -12,8 +12,11 @@ import time
 from sklearn import metrics
 from utils.utils import say
 class Generator(nn.Module):
-    def __init__(self,args,embedding):
+    def __init__(self,args,embedding=None):
         super(Generator, self).__init__()
+        # if embedding is None:
+        #     self.embedding = nn.Embedding(300000,args.embedding_dim)
+        # else:
         self.embedding = embedding  # nn.Embedding(args.vocab_size,args.embedding_dim)
         self.hidden_dim = args.hidden_dim
         self.batch_size = args.batch_size
@@ -23,8 +26,8 @@ class Generator(nn.Module):
                 input_size = args.embedding_dim,
                 hidden_size = args.hidden_dim,
                 bidirectional=False)
-            self.initial_state = Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim)), \
-                                 Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim))
+            self.initial_state = (Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim)),
+                                 Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim)))
         elif args.rnn_type == "gru":
             self.rnn = nn.GRU(
                 input_size = args.embedding_dim,
@@ -52,7 +55,7 @@ class Generator(nn.Module):
         z_sizes = z.sum(dim=0).int()
         # max_z_sizes = z_sizes.max()
         #rationales shape(sentence_length, batch_size)
-        rationales = torch.LongTensor(self.sentence_length, self.batch_size)
+        rationales = torch.LongTensor(self.max_len, self.batch_size)
         rationales.fill_(self.pad_id)
         for n in range(self.batch_size):
             this_len = z_sizes[n].data[0]
@@ -206,7 +209,7 @@ def valid(args, model,valid_batches_x, valid_batches_y):
     return valid_total_loss / valid_batch_num
 
 
-def test(args, model, test_batches_x, test_batches_y, test_batches_num):
+def a(args, model, test_batches_x, test_batches_y, test_batches_num):
     test_batch_num = len(test_batches_x)
     valid_total_loss = 0.
     for b in range(test_batch_num):
@@ -275,7 +278,12 @@ def main(args):
               test_data=test_data)
 
 
+# def my(args):
+#     generator = Generator(args)
+#     x = Variable(torch.LongTensor([[1 for j in range(256)] for i in range(64)]).t())#Variable(torch.ones(256, 64))
+#     C=generator(x)
 
 if __name__=="__main__":
     args = options.load_arguments()
+    # my(args)
     main(args)
