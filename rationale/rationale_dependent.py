@@ -145,8 +145,10 @@ def train(args, model,train_data, valid_data, test_data = None):
         train_epoch_loss = 0.
         batch_num = len(train_batches_x)
         for b in range(batch_num):
-            bx = torch.FloatTensor(train_batches_x[b])
-            by = torch.LongTensor(train_batches_y[b])
+            # bx = torch.FloatTensor(train_batches_x[b])
+            # by = torch.LongTensor(train_batches_y[b])
+            bx = train_batches_x[b]
+            by = train_batches_y[b]
             if args.use_gpu and torch.cuda.is_available():
                 bx, by = Variable(bx.cuda()), Variable(by.cuda())
             else:
@@ -183,8 +185,10 @@ def valid(args, model,valid_batches_x, valid_batches_y):
     valid_total_loss = 0.
     for b in range(valid_batch_num):
         print('.', end='', flush=True)
-        bx = torch.FloatTensor(valid_batches_x[b])
-        by = torch.LongTensor(valid_batches_y[b])
+        # bx = torch.FloatTensor(valid_batches_x[b])
+        # by = torch.LongTensor(valid_batches_y[b])
+        bx = valid_batches_x[b]
+        by = valid_batches_y[b]
         if args.use_gpu and torch.cuda.is_available():
             bx, by = Variable(bx.cuda()), Variable(by.cuda())
         else:
@@ -199,12 +203,14 @@ def valid(args, model,valid_batches_x, valid_batches_y):
 
 
 def test(args, model, test_batches_x, test_batches_y, test_batches_num):
-    valid_batch_num = len(test_batches_x)
+    test_batch_num = len(test_batches_x)
     valid_total_loss = 0.
-    for b in range(valid_batch_num):
+    for b in range(test_batch_num):
         print('.', end='', flush=True)
-        bx = torch.FloatTensor(test_batches_x[b])
-        by = torch.LongTensor(test_batches_y[b])
+        # bx = torch.FloatTensor(test_batches_x[b])
+        # by = torch.LongTensor(test_batches_y[b])
+        bx = test_batches_x[b]
+        by = test_batches_y[b]
         bnumber = test_batches_num[b]
         if args.use_gpu and torch.cuda.is_available():
             bx, by = Variable(bx.cuda()), Variable(by.cuda())

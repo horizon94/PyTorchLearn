@@ -112,7 +112,7 @@ def read_annotations(path):
     say("max text length: {}\n".format(max(len(x) for x in data_x)))
     return data_x, data_y
 
-def create_batches(x, y, batch_size, padding_id, sort=True):
+def create_batches(x, y, batch_size, padding_id, max_len, sort=True):
     batches_x, batches_y = [], []
     N = len(x)
     M = (N - 1) // batch_size + 1
@@ -123,9 +123,10 @@ def create_batches(x, y, batch_size, padding_id, sort=True):
         y = [y[i] for i in perm]
     for i in range(M):
         bx, by = create_one_batch(
-                    lstx=x[i*batch_size:(i+1)*batch_size],
-                    lsty=y[i*batch_size:(i+1)*batch_size],
-                    padding_id=padding_id
+                    x[i*batch_size:(i+1)*batch_size],
+                    y[i*batch_size:(i+1)*batch_size],
+                    max_len,
+                    padding_id
                 )
         batches_x.append(bx)
         batches_y.append(by)
@@ -147,7 +148,7 @@ def create_batches_with_num(x, y, num, batch_size, padding_id, sort=True):
         x = [ x[i] for i in perm ]
         y = [ y[i] for i in perm ]
         num = [num[i] for i in perm]
-    for i in xrange(M):
+    for i in range(M):
         bx, by= create_one_batch(
                     x[i*batch_size:(i+1)*batch_size],
                     y[i*batch_size:(i+1)*batch_size],
@@ -166,17 +167,14 @@ def create_batches_with_num(x, y, num, batch_size, padding_id, sort=True):
         batches_num = [batches_num[i] for i in perm2]
     return batches_x, batches_y, batches_num
 
-def create_one_batch(lstx, lsty, padding_id):
-    """
-    lstx is a list of 1-d LongTensors
-    """
+def create_one_batch(lstx, lsty, max_len, padding_id):
     batch_size = len(lstx)
-    max_len = max(x.shape[0] for x in lstx)
+    # max_len = max(x.shape[0] for x in lstx)
     assert min(x.shape[0] for x in lstx) > 0
     bx = torch.LongTensor(max_len, batch_size)
     bx.fill_(padding_id)
     for n in range(batch_size):
         this_len = lstx[n].shape[0]
         bx[:this_len, n] = lstx[n]
-    by = torch.Tensor(lsty)
+    by = torch.LongTensor(lsty)
     return bx, by
