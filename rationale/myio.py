@@ -53,6 +53,8 @@ class embedding_loader():
                 word2idx[word] = len(word2idx)
                 embeddings.append(np.random.rand(embedding_dim) * (0.001 if word != oov else 0.0))
                 idx2word.append(word)
+
+        self.pad_id = word2idx["<padding>"]
         if oov is not None and oov is not False:
             assert oov in word2idx, "oov {} not in vocab".format(oov)
             self.oov_tok = oov
