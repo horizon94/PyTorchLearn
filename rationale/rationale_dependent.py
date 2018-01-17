@@ -1,3 +1,5 @@
+import sys
+sys.path.append("../")
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -97,7 +99,7 @@ class Encoder(nn.Module):
         return scores
 
 class Model(nn.Module):
-    def __init__(self, args=args, embedding_loader=None):
+    def __init__(self, args, embedding_loader=None):
         super(Model, self).__init__()
         self.embedding_loader=embedding_loader
         self.embedding = nn.Embedding(args.vocab_size,args.embedding_dim)
