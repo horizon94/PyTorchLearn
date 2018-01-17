@@ -17,7 +17,7 @@ class Generator(nn.Module):
         self.embedding = embedding  # nn.Embedding(args.vocab_size,args.embedding_dim)
         self.hidden_dim = args.hidden_dim
         self.batch_size = args.batch_size
-        self.sentence_length = args.sentence_length
+        self.max_len = args.max_len
         if args.rnn_type == "lstm":
             self.rnn = nn.LSTM(
                 input_size = args.embedding_dim,
@@ -86,7 +86,7 @@ class Encoder(nn.Module):
                 hidden_size=args.hidden_dim,
                 num_layers=self.num_layers)
             self.initial_state = Variable(torch.zeros(self.batch_size, self.hidden_dim))
-        self.linear = nn.Linear(self.num_hidden, args.class_num)
+        self.linear = nn.Linear(self.hidden_dim, args.class_num)
 
     def forward(self, x):
         # x shape (sentence_length, batch_size)
@@ -102,7 +102,7 @@ class Model(nn.Module):
     def __init__(self, args, embedding_loader=None):
         super(Model, self).__init__()
         self.embedding_loader=embedding_loader
-        self.embedding = nn.Embedding(args.vocab_size,args.embedding_dim)
+        self.embedding = nn.Embedding(embedding_loader.embeddings.shape[0],args.embedding_dim)
         if args.embedding and embedding_loader is not None:
             self.embedding.weight.data.copy_(torch.from_numpy(embedding_loader.embeddings))
         self.generator = Generator(args,self.embedding)
@@ -250,7 +250,7 @@ def main(args):
     if args.test_json:
         test_data = myio.read_rationales(args.test_json)
         for x in test_data:
-            x["x"] = filter(lambda xi: xi != "<padding>", x["x"])[:args.max_len]
+            x["x"] = list(filter(lambda xi: xi != "<padding>", x["x"]))[:args.max_len]
             x["xids"] = embedding_loader.map_words_to_indexes(x["x"])
     if args.train:
         model = Model(

@@ -29,7 +29,12 @@ def load_arguments():
                            type=int,
                            default=256,
                            help="max sentence length")
-
+    
+    argparser.add_argument("--num_layers",
+                           type=int,
+                           default=1,
+                           help="rnn layer number"
+                            )
     argparser.add_argument("--batch_size",
                            type=int,
                            default=64,
@@ -83,7 +88,7 @@ def load_arguments():
 
     argparser.add_argument("--test_json",
                            type=str,
-                           default="/home/jx/rcnn/data/chunkNew/annotation.chunk.json",
+                           default="/home/jx/rcnn/data/chunkNew/annotations.chunk.json",
                            help="test_json file path")
 
     argparser.add_argument("--save_model",

@@ -46,18 +46,19 @@ class embedding_loader():
             idx2word.append(word)
             embeddings.append(vector)
             count+=1
-            if count%100==0:
+            if count%100000==0:
                 print(count)
         for word in vocab:
             if word not in word2idx:
                 word2idx[word] = len(word2idx)
-                embeddings.append(np.random.rand((embedding_dim,)) * (0.001 if word != oov else 0.0))
+                embeddings.append(np.random.rand(embedding_dim) * (0.001 if word != oov else 0.0))
                 idx2word.append(word)
         if oov is not None and oov is not False:
-            assert oov in self.word2idx, "oov {} not in vocab".format(oov)
+            assert oov in word2idx, "oov {} not in vocab".format(oov)
             self.oov_tok = oov
-            self.oov_id = self.word2idx[oov]
+            self.oov_id = word2idx[oov]
         embeddings = np.vstack(embeddings).astype(np.float32)
+        print(embeddings.shape)
         return word2idx, idx2word, embeddings
     def map_words_to_indexes(self, sentence, filter_oov=False):
         oov_id=self.oov_id
@@ -105,7 +106,7 @@ def read_annotations(path):
             x = list(filter(lambda xi: xi != "<padding>", x))
             data_x.append(x)
             data_y.append(y)
-            print(count)
+            #print(count)
             count+=1
     say("{} examples loaded from {}\n".format(len(data_x), path))
     say("max text length: {}\n".format(max(len(x) for x in data_x)))
