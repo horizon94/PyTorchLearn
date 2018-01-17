@@ -104,7 +104,7 @@ class Model(nn.Module):
         self.embedding_loader=embedding_loader
         self.embedding = nn.Embedding(args.vocab_size,args.embedding_dim)
         if args.embedding and embedding_loader is not None:
-            self.embedding.weight=nn.Parameter(torch.FloatTensor(embedding_loader.embeddings))
+            self.embedding.weight.data.copy_(torch.from_numpy(embedding_loader.embeddings))
         self.generator = Generator(args,self.embedding)
         self.encoder = Encoder(args,self.embedding)
 

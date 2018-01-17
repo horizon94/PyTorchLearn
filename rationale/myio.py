@@ -32,7 +32,9 @@ class embedding_loader():
         idx2word=[]
         embeddings=[]
         with file_open(path) as fin:
-            for line in fin:
+            count=0
+            lines = fin.readlines()
+            for line in lines:
                 line = line.strip()
                 if line:
                     parts = line.split()
@@ -42,8 +44,12 @@ class embedding_loader():
                     word2idx[word] = len(word2idx)
                     idx2word.append(word)
                     # vals = np.array([float(x) for x in parts[1:]])
-                    vals = [float(x) for x in parts[1:]]
+                    vals = np.array([float(x) for x in parts[1:]])
                     embeddings.append(vals)
+                count+=1
+                if count%100==0:
+                    print(count)
+        embeddings = np.vstack(embeddings).astype(np.float32)
         return word2idx, idx2word, embeddings
     def map_words_to_indexes(self,sentence):
         return [self.word2idx[word] for word in sentence]
@@ -68,9 +74,10 @@ def read_annotations(path):
     data_x, data_y = [], []
     fopen = gzip.open if path.endswith(".gz") else open
     with fopen(path, 'rt') as fin:
+        count=0
         for line in fin:
             # y, sep, x = line.partition("\t")
-            y, _, _, x, _ = line.split("\t")
+            y, x, _, _, _ = line.split("\t")
             x, y = x.split(" "), y.split(" ")
             if len(x) == 0:
                 continue
@@ -78,6 +85,8 @@ def read_annotations(path):
             x = filter(lambda xi: xi != "<padding>", x)
             data_x.append(x)
             data_y.append(y)
+            print(count)
+            count+=1
     say("{} examples loaded from {}\n".format(len(data_x), path))
     say("max text length: {}\n".format(max(len(x) for x in data_x)))
     return data_x, data_y
