@@ -37,7 +37,7 @@ def load_arguments():
 
     argparser.add_argument("--embed_dim",
                            type=int,
-                           default=2,
+                           default=200,
                            help="word embedding dimension")
 
     argparser.add_argument("--hidden_dim",
@@ -68,6 +68,7 @@ def load_arguments():
     # pathes
     argparser.add_argument("--embedding",
                            type=str,
+                           default="/home/jx/rcnn/data/word2Vec-200.txt",
                            help="pretrained embedding file path")
 
     argparser.add_argument("--train",
@@ -97,4 +98,5 @@ def load_arguments():
                            type=bool,
                            default=True,
                            help="use gpu")
-
+    args = argparser.parse_args()
+    return args
