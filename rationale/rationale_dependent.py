@@ -236,7 +236,9 @@ def mf(self, preds, golds, label):
 def main(args):
     print(args)
     assert args.embedding, "Pre-trained word embeddings required."
-    embedding_loader = myio.embedding_loader(args.embedding)
+    embedding_loader = myio.embedding_loader(args.embedding,
+                                             args.embedding_dim
+                                             )
     if args.train:
         train_x, train_y = myio.read_annotations(args.train)
         train_x = [ embedding_loader.map_words_to_indexes(x)[:args.max_len] for x in train_x ]

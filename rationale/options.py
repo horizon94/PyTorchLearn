@@ -35,7 +35,7 @@ def load_arguments():
                            default=64,
                            help="batch size")
 
-    argparser.add_argument("--embed_dim",
+    argparser.add_argument("--embedding_dim",
                            type=int,
                            default=200,
                            help="word embedding dimension")

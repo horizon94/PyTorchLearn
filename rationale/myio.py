@@ -22,39 +22,59 @@ def load_embedding_iterator(path):
                 vals = torch.FloatTensor([float(x) for x in parts[1:]])
                 yield word, vals
 class embedding_loader():
-    def __init__(self,path):
-        self.path=path
-        self.word2idx, self.idx2word, self.embeddings=self.load_embedding(self.path)
+    def __init__(self,
+                 path,
+                 embedding_dim,
+                 vocab=["<unk>","<padding>"],
+                 oov="<unk>"):
+        self.path = path
+        self.embedding_dim = embedding_dim
+        self.vocab = vocab
+        self.oov = oov
+        embed_iterator = load_embedding_iterator(path)
+        self.word2idx, self.idx2word, self.embeddings=self.load_embedding(embed_iterator, embedding_dim, vocab, oov)
 
-    def load_embedding(self,path):
-        file_open = gzip.open if path.endswith(".gz") else open
+    def load_embedding(self, embed_iterator, embedding_dim, vocab, oov):
         word2idx={}
         idx2word=[]
         embeddings=[]
-        with file_open(path) as fin:
-            count=0
-            lines = fin.readlines()
-            for line in lines:
-                line = line.strip()
-                if line:
-                    parts = line.split()
-                    word = parts[0]
-                    if word in idx2word:
-                        continue
-                    word2idx[word] = len(word2idx)
-                    idx2word.append(word)
-                    # vals = np.array([float(x) for x in parts[1:]])
-                    vals = np.array([float(x) for x in parts[1:]])
-                    embeddings.append(vals)
-                count+=1
-                if count%100==0:
-                    print(count)
+        count=0
+        for word, vector in embed_iterator:
+            assert word not in word2idx, "Duplicate words in initial embeddings"
+            assert embedding_dim == len(vector), "args.embedding_dim != actual word vector size"
+            word2idx[word] = len(word2idx)
+            idx2word.append(word)
+            embeddings.append(vector)
+            count+=1
+            if count%100==0:
+                print(count)
+        for word in vocab:
+            if word not in word2idx:
+                word2idx[word] = len(word2idx)
+                embeddings.append(np.random.rand((embedding_dim,)) * (0.001 if word != oov else 0.0))
+                idx2word.append(word)
+        if oov is not None and oov is not False:
+            assert oov in self.word2idx, "oov {} not in vocab".format(oov)
+            self.oov_tok = oov
+            self.oov_id = self.word2idx[oov]
         embeddings = np.vstack(embeddings).astype(np.float32)
         return word2idx, idx2word, embeddings
-    def map_words_to_indexes(self,sentence):
-        return [self.word2idx[word] for word in sentence]
+    def map_words_to_indexes(self, sentence, filter_oov=False):
+        oov_id=self.oov_id
+        if filter_oov:
+            not_oov = lambda x: x != oov_id
+            return np.array(
+                filter(not_oov, [self.word2idx.get(x, oov_id) for x in sentence]),
+                dtype="int32")
+        else:
+            ids = []
+            for x in sentence:
+                ids.append(self.word2idx.get(x, oov_id))  # , dtype = "int32")
+            return np.array(ids, dtype="int32")
+
+
     def map_indexes_to_words(self,sentence):
-        return [self.idx2word[id] for id in sentence]
+        return [self.idx2word[id] if id<len(self.word2idx) else "<err>" for id in sentence]
     def map_word_to_index(self,word):
         return self.word2idx[word]
     def map_index_to_word(self,index):
@@ -82,7 +102,7 @@ def read_annotations(path):
             if len(x) == 0:
                 continue
             y = np.asarray([float(v) for v in y], dtype=np.float32)
-            x = filter(lambda xi: xi != "<padding>", x)
+            x = list(filter(lambda xi: xi != "<padding>", x))
             data_x.append(x)
             data_y.append(y)
             print(count)
