@@ -72,14 +72,17 @@ def load_arguments():
 
     argparser.add_argument("--train",
                            type=str,
+                           default="/home/jx/rcnn/data/chunkNew/train.txt",
                            help="train file path")
 
     argparser.add_argument("--valid",
                            type=str,
+                           default="/home/jx/rcnn/data/chunkNew/valid.txt",
                            help="valid file path")
 
     argparser.add_argument("--test_json",
                            type=str,
+                           default="/home/jx/rcnn/data/chunkNew/annotation.chunk.json",
                            help="test_json file path")
 
     argparser.add_argument("--save_model",
