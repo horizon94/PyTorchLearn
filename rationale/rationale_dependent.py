@@ -22,15 +22,15 @@ class Generator(nn.Module):
             self.rnn = nn.LSTM(
                 input_size = args.embedding_dim,
                 hidden_size = args.hidden_dim,
-                bidirectional=True)
-            self.initial_state = Variable(torch.zeros(self.batch_size, self.hidden_dim)), \
-                                 Variable(torch.zeros(self.batch_size, self.hidden_dim))
+                bidirectional=False)
+            self.initial_state = Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim)), \
+                                 Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim))
         elif args.rnn_type == "gru":
             self.rnn = nn.GRU(
                 input_size = args.embedding_dim,
                 hidden_size = args.hidden_dim,
-                bidirectional=True)
-            self.initial_state = Variable(torch.zeros(self.batch_size, self.hidden_dim))
+                bidirectional=False)
+            self.initial_state = Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim))
         self.zlayer = Zlayer(args.hidden_dim, args.batch_size)
 
 
@@ -39,6 +39,9 @@ class Generator(nn.Module):
         # embeddings shape(sentence_length, batch_size, embedding_dim)
         embeddings=self.embedding(sentences)
         # hidden_states shape(sentence_length, batch_size, hidden_dim)
+        print(embeddings.type)
+        print(self.initial_state[0].type)
+        print(self.initial_state[1].type)
         hidden_states, _ = self.rnn(embeddings,self.initial_state)
         # pz shape(sentence_length,batch_size)
         pz = self.zlayer(hidden_states)
@@ -125,7 +128,7 @@ def train(args, model,train_data, valid_data, test_data = None):
     padding_id=model.embedding_loader.map_word_to_index("<padding>")
     if valid_data is not None:
         valid_batches_x, valid_batches_y = myio.create_batches(
-            valid_data[0], valid_data[1], args.batch_size, padding_id
+            valid_data[0], valid_data[1], args.batch_size, padding_id, args.max_len
         )
     if test_data is not None:
         test_batches_x, test_batches_y, test_batches_num = myio.create_batches_with_num(
@@ -134,12 +137,13 @@ def train(args, model,train_data, valid_data, test_data = None):
             [i["number"] for i in test_data],
             args.batch_size,
             padding_id,
+            args.max_len,
             sort=False
         )
     best_valid_Loss = 1e100
     for epoch in range(args.max_epoches):
         train_batches_x, train_batches_y = myio.create_batches(
-            train_data[0], train_data[1], args.batch_size, padding_id
+            train_data[0], train_data[1], args.batch_size, padding_id,args.max_len
         )
         epoch_start_time = time.time()
         train_epoch_loss = 0.

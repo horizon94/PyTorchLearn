@@ -138,10 +138,10 @@ def create_batches(x, y, batch_size, padding_id, max_len, sort=True):
         batches_y = [batches_y[i] for i in perm2]
     return batches_x, batches_y
 
-def create_batches_with_num(x, y, num, batch_size, padding_id, sort=True):
+def create_batches_with_num(x, y, num, batch_size, padding_id,max_len,sort=True):
     batches_x, batches_y, batches_num = [ ], [ ], [ ]
     N = len(x)
-    M = (N-1)/batch_size + 1
+    M = (N-1)//batch_size + 1
     if sort:
         perm = range(N)
         perm = sorted(perm, key=lambda i: len(x[i]))
@@ -152,6 +152,7 @@ def create_batches_with_num(x, y, num, batch_size, padding_id, sort=True):
         bx, by= create_one_batch(
                     x[i*batch_size:(i+1)*batch_size],
                     y[i*batch_size:(i+1)*batch_size],
+                    max_len,
                     padding_id
                 )
         bnum=num[i*batch_size:(i+1)*batch_size]
@@ -175,6 +176,7 @@ def create_one_batch(lstx, lsty, max_len, padding_id):
     bx.fill_(padding_id)
     for n in range(batch_size):
         this_len = lstx[n].shape[0]
-        bx[:this_len, n] = lstx[n]
-    by = torch.LongTensor(lsty)
+        bx[:this_len, n] = torch.from_numpy(lstx[n])
+    lsty = np.vstack(lsty)
+    by = torch.from_numpy(lsty)
     return bx, by

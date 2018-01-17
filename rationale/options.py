@@ -22,14 +22,19 @@ def load_arguments():
 
     argparser.add_argument("--rnn_type",
                            type=str,
-                           default="gru",
+                           default="lstm",
                            help="rnn type")
 
     argparser.add_argument("--max_len",
                            type=int,
                            default=256,
                            help="max sentence length")
-    
+    argparser.add_argument("--num_directions",
+                           type=int,
+                           default=1,
+                           help="rnn direction number"
+                            )
+
     argparser.add_argument("--num_layers",
                            type=int,
                            default=1,
@@ -47,7 +52,7 @@ def load_arguments():
 
     argparser.add_argument("--hidden_dim",
                            type=int,
-                           default=321,
+                           default=30,
                            help="lstm hidden dimension")
 
     argparser.add_argument("--loss_func",
