@@ -42,7 +42,7 @@ def load_arguments():
                             )
     argparser.add_argument("--batch_size",
                            type=int,
-                           default=64,
+                           default=50,
                            help="batch size")
 
     argparser.add_argument("--embedding_dim",
@@ -57,7 +57,7 @@ def load_arguments():
 
     argparser.add_argument("--loss_func",
                            type=str,
-                           default="ce",
+                           default="mse",
                            help="loss function: [ce, mse]")
 
     argparser.add_argument("--expected_z_size",
@@ -67,12 +67,13 @@ def load_arguments():
 
     argparser.add_argument("--sparsity",
                            type=float,
-                           default=0.0003,
+                           default=0.0,
+                           #default=0.0003,
                            help="rationale size penalty factor")
 
     argparser.add_argument("--coherence",
                            type=float,
-                           default=2,
+                           default=2.0,
                            help="rationale coherence penalty factor")
 
     # pathes

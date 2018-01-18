@@ -32,7 +32,7 @@ class Zlayer(nn.Module):
         self.batch_size = batch_size
         self.cell = ZlayerCell(input_x_dim)
         if args.use_gpu and torch.cuda.is_available():
-            self.initial_state = Variable(torch.zeros(self.batch_size,1).cuda)
+            self.initial_state = Variable(torch.zeros(self.batch_size,1).cuda())
         else:
             self.initial_state = Variable(torch.zeros(self.batch_size, 1))
 

@@ -27,15 +27,15 @@ class Generator(nn.Module):
                 input_size = args.embedding_dim,
                 hidden_size = args.hidden_dim,
                 bidirectional=False)
-            self.initial_state = (Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim)),
-                                 Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim)))
+            self.initial_state = (Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim).cuda()),
+                                 Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim)).cuda())
         elif args.rnn_type == "gru":
             self.rnn = nn.GRU(
                 input_size = args.embedding_dim,
                 hidden_size = args.hidden_dim,
                 bidirectional=False)
             self.initial_state = Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim))
-        self.zlayer = Zlayer(args.hidden_dim, args.batch_size)
+        self.zlayer = Zlayer(args,args.hidden_dim, args.batch_size)
 
 
     def forward(self,sentences):
@@ -43,9 +43,9 @@ class Generator(nn.Module):
         # embeddings shape(sentence_length, batch_size, embedding_dim)
         embeddings=self.embedding(sentences)
         # hidden_states shape(sentence_length, batch_size, hidden_dim)
-        print(embeddings.type)
-        print(self.initial_state[0].type)
-        print(self.initial_state[1].type)
+        #print(embeddings.type)
+        #print(self.initial_state[0].type)
+        #print(self.initial_state[1].type)
         hidden_states, _ = self.rnn(embeddings,self.initial_state)
         # pz shape(sentence_length,batch_size)
         pz = self.zlayer(hidden_states)
@@ -56,13 +56,14 @@ class Generator(nn.Module):
         z_sizes = z.sum(dim=0).int()
         # max_z_sizes = z_sizes.max()
         #rationales shape(sentence_length, batch_size)
-        rationales = torch.LongTensor(self.max_len, self.batch_size)
+        rationales = torch.LongTensor(self.max_len, self.batch_size).cuda()
         rationales.fill_(self.pad_id)
         for n in range(self.batch_size):
             this_len = z_sizes[n].data[0]
-            rationales[:this_len, n] = torch.masked_select(
-                sentences[:, n].data, z[:, n].data.byte()
-            )
+            if this_len>0:
+                rationales[:this_len, n] = torch.masked_select(
+                sentences[:, n].data, z[:, n].data.byte())
+        rationales = Variable(rationales)
         return pz, z, rationales, z_sizes, z_bernoulli
 
 
@@ -85,22 +86,32 @@ class Encoder(nn.Module):
                 input_size=args.embedding_dim,
                 hidden_size=args.hidden_dim,
                 num_layers=self.num_layers)
-            self.initial_state = Variable(torch.zeros(self.batch_size, self.hidden_dim)), \
-                                 Variable(torch.zeros(self.batch_size, self.hidden_dim))
+            if args.use_gpu and torch.cuda.is_available():
+               self.initial_state = Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim).cuda()), \
+                                 Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim).cuda())
+            else:
+               self.initial_state = Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim)), \
+                                 Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim))
         elif args.rnn_type == "gru":
             self.rnn = nn.GRU(
                 input_size=args.embedding_dim,
                 hidden_size=args.hidden_dim,
                 num_layers=self.num_layers)
-            self.initial_state = Variable(torch.zeros(self.batch_size, self.hidden_dim))
+            if args.use_gpu and torch.cuda.is_available():
+                self.initial_state = Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim).cuda())
+            else:
+                self.initial_state = Variable(torch.zeros(args.num_layers*args.num_directions,self.batch_size, self.hidden_dim))
         self.linear = nn.Linear(self.hidden_dim, args.class_num)
 
     def forward(self, x):
         # x shape (sentence_length, batch_size)
         # outputs shape (sentence_length, batch_size, hidden_dim)
-        outputs, _ = self.rnn(x,self.initial_state)
+        #print(x.type)
+        embeddings=self.embedding(x)
+        outputs, _ = self.rnn(embeddings,self.initial_state)
         # final_embed shape (batch_size, hidden_dim)
         final_embed = torch.mean(outputs, dim=0)
+        final_embed = outputs[-1]
         # result shape (batch_size, class_num)
         scores = self.linear(final_embed)
         return scores
@@ -164,14 +175,21 @@ def train(args, model,train_data, valid_data, test_data = None):
                 bx, by = Variable(bx), Variable(by)
             model.zero_grad()
             scores, pz, z, rationales, z_sizes, z_bernoulli = model(bx)
+            #print(scores.type)
+            #print(by.type)
             if args.loss_func is "mse":
-                pred_loss = nn.MSELoss(nn.Sigmoid(scores),by)
+                loss_func = nn.MSELoss()
+                activ_func = nn.Sigmoid()
+                pred_loss = loss_func(activ_func(scores),by)
             elif args.loss_func is "ce":
-                pred_loss = nn.CrossEntropyLoss(scores,by)
-            z_size_loss = torch.abs(z_sizes.sum()-args.expected_z_size)
+                loss_func = nn.CrossEntropyLoss()
+                pred_loss = loss_func(scores,by)
+            z_size_loss = torch.abs(z_sizes.sum()-args.expected_z_size).float()
             z_coh_loss = (z[1:,:] - z[:-1,:]).abs().sum().float()
             reward = -(pred_loss + args.sparsity * z_size_loss + args.sparsity * args.coherence * z_coh_loss)
-            loss = -z_bernoulli.log_prob(z) * reward
+            #print(reward.type)
+            loss = -torch.sum(z_bernoulli.log_prob(z)) * reward
+            #print(loss.type)
             loss.backward()
             optimizer.step()
             train_epoch_loss += pred_loss.data[0]
@@ -179,6 +197,7 @@ def train(args, model,train_data, valid_data, test_data = None):
         valid_loss = valid(args, model, valid_batches_x, valid_batches_y)
         say('epoch %s train loss %.3f traintime %s validate loss %.3f\n' % (
             epoch, train_epoch_loss / batch_num, int(epoch_train_time), valid_loss))
+        #valid_loss = valid(args, model, valid_batches_x, valid_batches_y)
         # print('    validate loss %.3f' % (epoch_loss / num_batches))
         if valid_loss < best_valid_Loss:
             bestvalid_loss = valid_loss
@@ -204,9 +223,16 @@ def valid(args, model,valid_batches_x, valid_batches_y):
             bx, by = Variable(bx), Variable(by)
         scores, pz, z, rationales, z_sizes, z_bernoulli = model(bx)
         if args.loss_func is "mse":
-            pred_loss = nn.MSELoss(nn.Sigmoid(scores), by)
+            loss_func = nn.MSELoss()
+            activ_func = nn.Sigmoid()
+            pred_loss = loss_func(activ_func(scores),by)
         elif args.loss_func is "ce":
-            pred_loss = nn.CrossEntropyLoss(scores, by)
+            loss_func = nn.CrossEntropyLoss()
+            pred_loss = loss_func(scores,by)
+        #if args.loss_func is "mse":
+        #    pred_loss = nn.MSELoss(nn.Sigmoid(scores), by)
+        #elif args.loss_func is "ce":
+        #    pred_loss = nn.CrossEntropyLoss(scores, by)
         valid_total_loss += pred_loss.data[0]
     return valid_total_loss / valid_batch_num
 
