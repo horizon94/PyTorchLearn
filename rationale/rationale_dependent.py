@@ -173,10 +173,13 @@ def train(args, model,train_data, valid_data, test_data = None):
                 bx, by = Variable(bx.cuda()), Variable(by.cuda())
             else:
                 bx, by = Variable(bx), Variable(by)
+            # print(bx[:,0])
             model.zero_grad()
             scores, pz, z, rationales, z_sizes, z_bernoulli = model(bx)
-            #print(scores.type)
-            #print(by.type)
+            print(z[:,0])
+            print(pz[:,0])
+            #print(scores.shape)
+            #print(by.shape)
             if args.loss_func is "mse":
                 loss_func = nn.MSELoss()
                 activ_func = nn.Sigmoid()
@@ -187,9 +190,10 @@ def train(args, model,train_data, valid_data, test_data = None):
             z_size_loss = torch.abs(z_sizes.sum()-args.expected_z_size).float()
             z_coh_loss = (z[1:,:] - z[:-1,:]).abs().sum().float()
             reward = -(pred_loss + args.sparsity * z_size_loss + args.sparsity * args.coherence * z_coh_loss)
-            #print(reward.type)
+            # print(reward.type)
             loss = -torch.sum(z_bernoulli.log_prob(z)) * reward
-            #print(loss.type)
+            # print(loss.type)
+            print("pred_loss in batch:",pred_loss.data[0],"\t\treward in batch:",reward.data[0],"\t\tloss in batch:",loss.data[0])
             loss.backward()
             optimizer.step()
             train_epoch_loss += pred_loss.data[0]
