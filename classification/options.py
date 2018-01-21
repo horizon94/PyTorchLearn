@@ -3,7 +3,7 @@ import argparse
 
 def load_arguments():
     argparser = argparse.ArgumentParser(sys.argv[0])
-    argparser.add_argument("--classes",
+    argparser.add_argument("--class_num",
 	    type = int,
 	    default = 51,
 	    help = "number of classes"

@@ -116,8 +116,8 @@ def read_annotations(path):
     say("max text length: {}\n".format(max(len(x) for x in data_x)))
     return data_x, data_y, data_a
 
-def create_batches(x, y, batch_size, padding_id, max_len, sort=True):
-    batches_x, batches_y = [], []
+def create_batches(x, y, a, batch_size, padding_id, max_len, sort=True):
+    batches_x, batches_y, batches_a= [ ], [ ], [ ]
     N = len(x)
     M = (N - 1) // batch_size + 1
     if sort:
@@ -125,37 +125,41 @@ def create_batches(x, y, batch_size, padding_id, max_len, sort=True):
         perm = sorted(perm, key=lambda i: len(x[i]))
         x = [x[i] for i in perm]
         y = [y[i] for i in perm]
+        a = [a[i] for i in perm]
     for i in range(M):
-        bx, by = create_one_batch(
+        bx, by, ba = create_one_batch(
                     x[i*batch_size:(i+1)*batch_size],
                     y[i*batch_size:(i+1)*batch_size],
+                    a[i * batch_size:(i + 1) * batch_size],
                     max_len,
                     padding_id
                 )
         batches_x.append(bx)
         batches_y.append(by)
+        batches_a.append(ba)
     if sort:
         random.seed(5817)
         perm2 = list(range(M))
         random.shuffle(perm2)
         batches_x = [batches_x[i] for i in perm2]
         batches_y = [batches_y[i] for i in perm2]
-    return batches_x, batches_y
+    return batches_x, batches_y, batches_a
 
-def create_batches_with_num(x, article, num, batch_size, padding_id,max_len,sort=True):
-    batches_x, batches_a, batches_num = [ ], [ ], [ ]
+def create_batches_with_num(x, y, article, num, batch_size, padding_id,max_len,sort=True):
+    batches_x,batches_y, batches_a, batches_num = [ ], [ ], [ ], [ ]
     N = len(x)
     M = (N-1)//batch_size + 1
     if sort:
         perm = range(N)
         perm = sorted(perm, key=lambda i: len(x[i]))
         x = [ x[i] for i in perm ]
-        # y = [ y[i] for i in perm ]
+        y = [ y[i] for i in perm ]
         num = [num[i] for i in perm]
         article = [article[i] for i in perm]
     for i in range(M):
         bx, ba= create_one_batch(
                     x[i*batch_size:(i+1)*batch_size],
+                    y[i * batch_size:(i + 1) * batch_size],
                     article[i*batch_size:(i+1)*batch_size],
                     max_len,
                     padding_id
@@ -171,9 +175,9 @@ def create_batches_with_num(x, article, num, batch_size, padding_id,max_len,sort
         batches_x = [ batches_x[i] for i in perm2 ]
         batches_a = [ batches_a[i] for i in perm2 ]
         batches_num = [batches_num[i] for i in perm2]
-    return batches_x, batches_a, batches_num
+    return batches_x, batches_y, batches_a, batches_num
 
-def create_one_batch(lstx, lsty, max_len, padding_id):
+def create_one_batch(lstx, lsty, lsta, max_len, padding_id):
     batch_size = len(lstx)
     # max_len = max(x.shape[0] for x in lstx)
     assert min(x.shape[0] for x in lstx) > 0
@@ -184,4 +188,6 @@ def create_one_batch(lstx, lsty, max_len, padding_id):
         bx[:this_len, n] = torch.from_numpy(lstx[n])
     lsty = np.vstack(lsty)
     by = torch.from_numpy(lsty)
-    return bx, by
+    lsta = np.vstack(lsta)
+    ba = torch.from_numpy(lsta)
+    return bx, by, ba
