@@ -9,7 +9,10 @@ def load_arguments():
                            type=int,
                            default=51,
                            help="number of classes")
-
+    argparser.add_argument("--articles_num",
+                           type=int,
+                           default=321,
+                           help="article num")
     argparser.add_argument("--max_epoches",
                            type=int,
                            default=100,

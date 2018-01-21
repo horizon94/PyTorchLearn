@@ -105,7 +105,7 @@ def read_annotations(path):
             if len(x) == 0:
                 continue
             y = np.asarray([float(v) for v in y], dtype=np.float32)
-            article = np.asarray([float(a) for a in article], dtype=np.float32)
+            article = np.asarray([1.0 if float(a)>0 else 0.0 for a in article], dtype=np.float32)
             x = list(filter(lambda xi: xi != "<padding>", x))
             data_x.append(x)
             data_y.append(y)

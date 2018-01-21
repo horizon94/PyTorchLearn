@@ -3,13 +3,15 @@ import torch
 import copy
 from torch.utils.data import DataLoader
 # import utils.DataProcessing as DP
-import classification.models.LSTMClassifier as LSTMC
+import sys
+sys.path.append("../")
+from classification.models.LSTMClassifier import LSTMClassifier as LSTMC
 import torch.optim as optim
 import torch.nn as nn
 from torch.autograd import Variable
 import classification.myio_article as myio
 import time
-import utils.utils.say as say
+from utils.utils import  say
 import classification.options_article as options
 use_plot = True
 use_save = True
@@ -82,6 +84,8 @@ def train(args, model,train_data, valid_data, test_data):
             loss = loss_func(activ_func(scores), ba)
             loss.backward()
             optimizer.step()
+            if b %100 == 0:
+                print("train_batch_loss=",loss.data[0])
             train_epoch_loss += loss.data[0]
         epoch_train_time = time.time() - epoch_start_time
         valid_loss = valid(args, model, valid_batches_x, valid_batches_a)
@@ -90,15 +94,16 @@ def train(args, model,train_data, valid_data, test_data):
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             say("BETTER MODEL! SAVING...")
-            model.save_model(args.save_model)
-            say("\n")
-            # test(args, model, test_batches_x, test_batches_y, test_batches_num)
+            #model.save_model(args.save_model)
+            #say("\n")
+            p_1, p_3, p_5, p_10 = test(args, model, test_batches_x, test_batches_a)
+            say("p@1=%.3f, p@3=%.3f, p@5=%.3f, p@10=%.3f" %(p_1, p_3, p_5, p_10))
 
 def valid(args, model,valid_batches_x, valid_batches_a):
     valid_batch_num = len(valid_batches_x)
     valid_total_loss = 0.
     for b in range(valid_batch_num):
-        print('.', end='', flush=True)
+        #print('.', end='', flush=True)
         # bx = torch.FloatTensor(valid_batches_x[b])
         # by = torch.LongTensor(valid_batches_y[b])
         bx = valid_batches_x[b]
@@ -107,12 +112,59 @@ def valid(args, model,valid_batches_x, valid_batches_a):
             bx, ba = Variable(bx.cuda()), Variable(ba.cuda())
         else:
             bx, ba = Variable(bx), Variable(ba)
-        scores, pz, z, rationales, z_sizes, z_bernoulli = model(bx)
+        scores = model(bx)
         loss_func = nn.MSELoss()
         activ_func = nn.Sigmoid()
         loss = loss_func(activ_func(scores), ba)
         valid_total_loss += loss.data[0]
     return valid_total_loss / valid_batch_num
+def test(args, model, test_batches_x, test_batches_a):
+    test_batch_num = len(test_batches_x)
+    scores_total=None
+    golds_total=None
+    for b in range(test_batch_num):
+        bx = test_batches_x[b]
+        ba = test_batches_a[b]
+        if args.use_gpu and torch.cuda.is_available():
+             bx, ba = Variable(bx.cuda()), Variable(ba.cuda())
+        else:
+             bx, ba = Variable(bx), Variable(ba)
+        scores = model(bx)
+        if scores_total is not None:
+            golds_total = torch.cat((golds_total,ba), dim = 0)
+            scores_total = torch.cat((scores_total,scores), dim = 0)
+        else:
+            golds_total = ba
+            scores_total = scores
+    return MF_DOC(scores_total, golds_total)
+    
+    
+
+
+
+
+
+def MF_DOC(scores, golds):
+    '''
+         calculate p@1 p@3 p@5 p@10
+    '''
+    result=[]
+    batch_size = scores.shape[0]
+    #scores shape(batch_size,article_num)
+    sorted_tensor, indices = torch.sort(scores, dim=1, descending=True)
+    #indices shape(batch_size, article_num)
+    for i in [1,3,5,10]:
+        right = 0
+        choosed=indices[:,i]  # shape(batch_size, i)
+        for b in range(batch_size):
+            choose_one_doc = choosed[b].data[:]
+            gold_one_doc = golds[b].data[:]
+            for doc in choose_one_doc:
+                if gold_one_doc[doc]>0.:
+                    right += 1
+        p=right/(i*batch_size)
+        result.append(p)
+    return result
 def main(args):
     print(args)
     # assert args.embedding, "Pre-trained word embeddings required."

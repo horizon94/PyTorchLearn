@@ -12,7 +12,7 @@ class LSTMClassifier(nn.Module):
         self.hidden_dim = args.hidden_dim
         self.batch_size = args.batch_size
         self.use_gpu = args.use_gpu
-
+        self.embedding_loader = embedding_loader
         self.word_embeddings = nn.Embedding(embedding_loader.embeddings.shape[0], args.embedding_dim)
         self.lstm = nn.LSTM(args.embedding_dim, args.hidden_dim)
         self.hidden2label = nn.Linear(args.hidden_dim, args.articles_num)
